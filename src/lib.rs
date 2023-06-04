@@ -70,16 +70,17 @@
 //! [`.char_ranges()`]: CharRangesExt::char_ranges
 //! [`CharRanges`]: CharRanges
 //!
-//! [`.char_indicies()`]: https://doc.rust-lang.org/std/primitive.str.html#method.char_indices
-//! [`DoubleEndedIterator`]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html
+//! [`.char_indicies()`]: https://doc.rust-lang.org/core/primitive.str.html#method.char_indices
+//! [`DoubleEndedIterator`]: https://doc.rust-lang.org/core/iter/trait.DoubleEndedIterator.html
 
+#![no_std]
 #![forbid(unsafe_code)]
 #![forbid(elided_lifetimes_in_paths)]
 
-use std::fmt;
-use std::iter::{DoubleEndedIterator, FusedIterator};
-use std::ops::Range;
-use std::str::CharIndices;
+use core::fmt;
+use core::iter::{DoubleEndedIterator, FusedIterator};
+use core::ops::Range;
+use core::str::CharIndices;
 
 pub trait CharRangesExt {
     /// Returns an iterator over [`char`]s and their start and end byte positions.
@@ -415,12 +416,16 @@ mod tests {
     fn test_char_ranges() {
         let text = "Hello World";
         for (r, c) in text.char_ranges() {
-            assert_eq!(&text[r], c.to_string());
+            let mut chars = text[r].chars();
+            assert_eq!(chars.next(), Some(c));
+            assert_eq!(chars.next(), None);
         }
 
         let text = "🗻12∈45🌏";
         for (r, c) in text.char_ranges() {
-            assert_eq!(&text[r], c.to_string());
+            let mut chars = text[r].chars();
+            assert_eq!(chars.next(), Some(c));
+            assert_eq!(chars.next(), None);
         }
     }
 

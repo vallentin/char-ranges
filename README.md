@@ -76,5 +76,5 @@ assert_eq!(chars.next(), None);
 [`.char_ranges()`]: https://docs.rs/char-ranges/*/char_ranges/trait.CharRangesExt.html#tymethod.char_ranges
 [`CharRanges`]: https://docs.rs/char-ranges/*/char_ranges/struct.CharRanges.html
 
-[`.char_indicies()`]: https://doc.rust-lang.org/std/primitive.str.html#method.char_indices
-[`DoubleEndedIterator`]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html
+[`.char_indicies()`]: https://doc.rust-lang.org/core/primitive.str.html#method.char_indices
+[`DoubleEndedIterator`]: https://doc.rust-lang.org/core/iter/trait.DoubleEndedIterator.html
