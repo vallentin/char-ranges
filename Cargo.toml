@@ -1,6 +1,6 @@
 [package]
 name = "char-ranges"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Iterate chars and their start and end byte positions"
 documentation = "https://docs.rs/char-ranges"

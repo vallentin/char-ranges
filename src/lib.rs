@@ -2,6 +2,11 @@
 //! producing the start byte position. This library implements [`.char_ranges()`],
 //! that produce both the start and end byte positions.
 //!
+//! If the input `text` is a substring of some original text, and the produced
+//! ranges are desired to be offset in relation to the substring. Then instead
+//! of [`.char_ranges()`] use <code>[.char_ranges_offset]\(offset)</code>
+//! or <code>.[char_ranges]\().[offset]\(offset)</code>.
+//!
 //! Note that simply using [`.char_indicies()`] and creating a range by mapping the
 //! returned index `i` to `i..(i + 1)` is not guaranteed to be valid. Given that
 //! some UTF-8 characters can be up to 4 bytes.
@@ -67,7 +72,36 @@
 //! assert_eq!(chars.next(), None);
 //! ```
 //!
+//! # Example - Offset Ranges
+//!
+//! If the input `text` is a substring of some original text, and the produced
+//! ranges are desired to be offset in relation to the substring. Then instead
+//! of [`.char_ranges()`] use <code>[.char_ranges_offset]\(offset)</code>
+//! or <code>.[char_ranges]\().[offset]\(offset)</code>.
+//!
+//! ```rust
+//! use char_ranges::CharRangesExt;
+//!
+//! let text = "Hello 👋 World 🌏";
+//!
+//! let start = 11; // Start index of 'W'
+//! let text = &text[start..]; // "World 🌏"
+//!
+//! let mut chars = text.char_ranges_offset(start);
+//! // or
+//! // let mut chars = text.char_ranges().offset(start);
+//!
+//! assert_eq!(chars.next(), Some((11..12, 'W'))); // These chars are 1 byte
+//! assert_eq!(chars.next(), Some((12..13, 'o')));
+//! assert_eq!(chars.next(), Some((13..14, 'r')));
+//!
+//! assert_eq!(chars.next_back(), Some((17..21, '🌏'))); // This char is 4 bytes
+//! ```
+//!
 //! [`.char_ranges()`]: CharRangesExt::char_ranges
+//! [char_ranges]: CharRangesExt::char_ranges
+//! [.char_ranges_offset]: CharRangesExt::char_ranges_offset
+//! [offset]: CharRanges::offset
 //! [`CharRanges`]: CharRanges
 //!
 //! [`.char_indicies()`]: https://doc.rust-lang.org/core/primitive.str.html#method.char_indices
@@ -87,6 +121,15 @@ pub trait CharRangesExt {
     ///
     /// See examples in the [crate root](crate).
     fn char_ranges(&self) -> CharRanges<'_>;
+
+    /// Returns an iterator over [`char`]s and their start and end byte positions,
+    /// with an offset applied to all positions.
+    ///
+    /// See examples in the [crate root](crate).
+    #[inline]
+    fn char_ranges_offset(&self, offset: usize) -> CharRangesOffset<'_> {
+        self.char_ranges().offset(offset)
+    }
 }
 
 impl CharRangesExt for str {
@@ -96,7 +139,11 @@ impl CharRangesExt for str {
     }
 }
 
+/// An iterator over [`char`]s and their start and end byte positions.
+///
 /// Note: Cloning this iterator is essentially a copy.
+///
+/// See examples in the [crate root](crate).
 #[derive(Clone)]
 pub struct CharRanges<'a> {
     iter: CharIndices<'a>,
@@ -105,7 +152,8 @@ pub struct CharRanges<'a> {
 impl<'a> CharRanges<'a> {
     /// Creates an iterator over [`char`]s and their start and end byte positions.
     ///
-    /// Consider using <code>text.[char_ranges()]</code> instead.
+    /// Consider using <code>text.[char_ranges()]</code>, instead of
+    /// explicitly using `CharRanges::new()`.
     ///
     /// See examples in the [crate root](crate).
     ///
@@ -131,11 +179,21 @@ impl<'a> CharRanges<'a> {
     ///
     /// assert_eq!(chars.next(), Some((0..1, 'A')));
     /// assert_eq!(chars.next_back(), Some((4..5, 'E')));
+    ///
     /// assert_eq!(chars.as_str(), "BCD");
     /// ```
     #[inline]
     pub fn as_str(&self) -> &'a str {
         self.iter.as_str()
+    }
+
+    /// Returns an iterator over the remaining [`char`]s and their start and
+    /// end byte positions, with an offset applied to all positions.
+    ///
+    /// See examples in the [crate root](crate).
+    #[inline]
+    pub fn offset(self, offset: usize) -> CharRangesOffset<'a> {
+        CharRangesOffset { iter: self, offset }
     }
 }
 
@@ -183,22 +241,141 @@ impl fmt::Debug for CharRanges<'_> {
     }
 }
 
+/// An iterator over [`char`]s and their start and end byte positions,
+/// with an offset applied to all positions.
+///
+/// Note: Cloning this iterator is essentially a copy.
+///
+/// See examples in the [crate root](crate).
+#[derive(Clone)]
+pub struct CharRangesOffset<'a> {
+    iter: CharRanges<'a>,
+    offset: usize,
+}
+
+impl<'a> CharRangesOffset<'a> {
+    /// Creates an iterator over [`char`]s and their start and end byte positions,
+    /// with an offset applied to all positions.
+    ///
+    /// Consider using <code>text.[char_ranges_offset()]</code> or
+    /// <code>text.[char_ranges()].[offset()]</code>, instead of
+    /// explicitly using `CharRangesOffset::new()`.
+    ///
+    /// See examples in the [crate root](crate).
+    ///
+    /// [char_ranges()]: CharRangesExt::char_ranges
+    /// [char_ranges_offset()]: CharRangesExt::char_ranges_offset
+    /// [offset()]: CharRanges::offset
+    #[inline]
+    pub fn new(offset: usize, text: &'a str) -> Self {
+        Self {
+            iter: text.char_ranges(),
+            offset,
+        }
+    }
+
+    /// Returns the remaining substring.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use char_ranges::CharRangesExt;
+    ///
+    /// let text = "Hello 👋 World 🌏";
+    ///
+    /// let start = 11; // Start index of 'W'
+    /// let text = &text[start..]; // "World 🌏"
+    ///
+    /// let mut chars = text.char_ranges_offset(start);
+    /// assert_eq!(chars.as_str(), "World 🌏");
+    ///
+    /// assert_eq!(chars.next(), Some((11..12, 'W'))); // These chars are 1 byte
+    /// assert_eq!(chars.next_back(), Some((17..21, '🌏'))); // This char is 4 bytes
+    ///
+    /// assert_eq!(chars.as_str(), "orld ");
+    /// ```
+    #[inline]
+    pub fn as_str(&self) -> &'a str {
+        self.iter.as_str()
+    }
+
+    /// Returns the `offset` this [`CharRangesOffset`] was created with.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use char_ranges::CharRangesExt;
+    ///
+    /// let text = "Hello 👋 World 🌏";
+    ///
+    /// let start = 11; // Start index of 'W'
+    /// let text = &text[start..]; // "World 🌏"
+    ///
+    /// let mut chars = text.char_ranges_offset(start);
+    /// // Offset is `start`
+    /// assert_eq!(chars.offset(), start);
+    ///
+    /// assert_eq!(chars.next(), Some((11..12, 'W'))); // These chars are 1 byte
+    /// assert_eq!(chars.next_back(), Some((17..21, '🌏'))); // This char is 4 bytes
+    ///
+    /// // Offset remains as `start` always
+    /// assert_eq!(chars.offset(), start);
+    /// ```
+    #[inline]
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+}
+
+impl Iterator for CharRangesOffset<'_> {
+    type Item = (Range<usize>, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (r, c) = self.iter.next()?;
+        let start = r.start + self.offset;
+        let end = r.end + self.offset;
+        Some((start..end, c))
+    }
+
+    #[inline]
+    fn count(self) -> usize {
+        self.iter.count()
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+
+    #[inline]
+    fn last(mut self) -> Option<(Range<usize>, char)> {
+        self.next_back()
+    }
+}
+
+impl DoubleEndedIterator for CharRangesOffset<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let (r, c) = self.iter.next_back()?;
+        let start = r.start + self.offset;
+        let end = r.end + self.offset;
+        Some((start..end, c))
+    }
+}
+
+impl FusedIterator for CharRangesOffset<'_> {}
+
+impl fmt::Debug for CharRangesOffset<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "CharRangesOffset(")?;
+        f.debug_list().entries(self.clone()).finish()?;
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::CharRangesExt;
-
-    #[test]
-    fn test_simple2() {
-        let text = "🗻∈🌏";
-
-        let mut chars = text.char_ranges();
-        assert_eq!(chars.as_str(), "🗻∈🌏");
-
-        assert_eq!(chars.next(), Some((0..4, '🗻')));
-        assert_eq!(chars.next(), Some((4..7, '∈')));
-        assert_eq!(chars.next(), Some((7..11, '🌏')));
-        assert_eq!(chars.next(), None);
-    }
 
     #[test]
     fn test_empty() {
@@ -270,6 +447,19 @@ mod tests {
 
     #[test]
     fn test_simple_multi_byte() {
+        let text = "🗻∈🌏";
+
+        let mut chars = text.char_ranges();
+        assert_eq!(chars.as_str(), "🗻∈🌏");
+
+        assert_eq!(chars.next(), Some((0..4, '🗻')));
+        assert_eq!(chars.next(), Some((4..7, '∈')));
+        assert_eq!(chars.next(), Some((7..11, '🌏')));
+        assert_eq!(chars.next(), None);
+    }
+
+    #[test]
+    fn test_simple_mixed_multi_byte() {
         let text = "🗻12∈45🌏";
         let mut chars = text.char_ranges();
         assert_eq!(chars.as_str(), "🗻12∈45🌏");
@@ -455,5 +645,34 @@ mod tests {
             let (last, _) = chars.next_back().unwrap();
             assert_eq!(chars.as_str(), &text[first.end..last.start]);
         }
+    }
+
+    #[test]
+    fn test_offset() {
+        let text = "Hello 👋 World 🌏";
+        let mut chars = text.char_ranges();
+
+        let emoji_end = {
+            assert_eq!(chars.next(), Some((0..1, 'H')));
+            assert_eq!(chars.next(), Some((1..2, 'e')));
+            assert_eq!(chars.next(), Some((2..3, 'l')));
+            assert_eq!(chars.next(), Some((3..4, 'l')));
+            assert_eq!(chars.next(), Some((4..5, 'o')));
+            assert_eq!(chars.next(), Some((5..6, ' ')));
+
+            let emoji_waving_hand = chars.next();
+            assert_eq!(emoji_waving_hand, Some((6..10, '👋')));
+
+            emoji_waving_hand.unwrap().0.end
+        };
+
+        let offset_chars = text[emoji_end..].char_ranges().offset(emoji_end);
+        assert_eq!(chars.as_str(), offset_chars.as_str());
+
+        for offset_char in offset_chars {
+            assert_eq!(chars.next(), Some(offset_char));
+        }
+
+        assert_eq!(chars.next(), None);
     }
 }
