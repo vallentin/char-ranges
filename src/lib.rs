@@ -2,11 +2,6 @@
 //! producing the start byte position. This library implements [`.char_ranges()`],
 //! that produce both the start and end byte positions.
 //!
-//! If the input `text` is a substring of some original text, and the produced
-//! ranges are desired to be offset in relation to the substring. Then instead
-//! of [`.char_ranges()`] use <code>[.char_ranges_offset]\(offset)</code>
-//! or <code>.[char_ranges]\().[offset]\(offset)</code>.
-//!
 //! Note that simply using [`.char_indicies()`] and creating a range by mapping the
 //! returned index `i` to `i..(i + 1)` is not guaranteed to be valid. Given that
 //! some UTF-8 characters can be up to 4 bytes.
@@ -50,7 +45,7 @@
 //! assert_eq!(chars.next(), None);
 //! ```
 //!
-//! # Example - `DoubleEndedIterator`
+//! # `DoubleEndedIterator`
 //!
 //! [`CharRanges`] also implements [`DoubleEndedIterator`] making it possible to iterate backwards.
 //!
@@ -76,7 +71,7 @@
 //! assert_eq!(chars.next(), None);
 //! ```
 //!
-//! # Example - Offset Ranges
+//! # Offset Ranges
 //!
 //! If the input `text` is a substring of some original text, and the produced
 //! ranges are desired to be offset in relation to the substring. Then instead
@@ -108,8 +103,8 @@
 //! [offset]: CharRanges::offset
 //! [`CharRanges`]: CharRanges
 //!
-//! [`.char_indicies()`]: https://doc.rust-lang.org/core/primitive.str.html#method.char_indices
-//! [`DoubleEndedIterator`]: https://doc.rust-lang.org/core/iter/trait.DoubleEndedIterator.html
+//! [`.char_indicies()`]: https://doc.rust-lang.org/std/primitive.str.html#method.char_indices
+//! [`DoubleEndedIterator`]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html
 //!
 //! [`last()`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.last
 //! [`nth()`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.nth
