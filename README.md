@@ -26,6 +26,10 @@ some UTF-8 characters can be up to 4 bytes.
 
 _Assumes encoded in UTF-8._
 
+The implementation specializes [`last()`], [`nth()`], [`next_back()`],
+and [`nth_back()`]. Such that the length of intermediate characters is
+not wastefully calculated.
+
 ## Example
 
 ```rust
@@ -113,3 +117,8 @@ assert_eq!(chars.next_back(), Some((17..21, '🌏'))); // This char is 4 bytes
 
 [`.char_indicies()`]: https://doc.rust-lang.org/core/primitive.str.html#method.char_indices
 [`DoubleEndedIterator`]: https://doc.rust-lang.org/core/iter/trait.DoubleEndedIterator.html
+
+[`last()`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.last
+[`nth()`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.nth
+[`next_back()`]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html#tymethod.next_back
+[`nth_back()`]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html#method.nth_back

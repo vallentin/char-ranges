@@ -20,6 +20,10 @@
 //!
 //! _Assumes encoded in UTF-8._
 //!
+//! The implementation specializes [`last()`], [`nth()`], [`next_back()`],
+//! and [`nth_back()`]. Such that the length of intermediate characters is
+//! not wastefully calculated.
+//!
 //! # Example
 //!
 //! ```rust
@@ -106,6 +110,11 @@
 //!
 //! [`.char_indicies()`]: https://doc.rust-lang.org/core/primitive.str.html#method.char_indices
 //! [`DoubleEndedIterator`]: https://doc.rust-lang.org/core/iter/trait.DoubleEndedIterator.html
+//!
+//! [`last()`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.last
+//! [`nth()`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.nth
+//! [`next_back()`]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html#tymethod.next_back
+//! [`nth_back()`]: https://doc.rust-lang.org/std/iter/trait.DoubleEndedIterator.html#method.nth_back
 
 #![no_std]
 #![forbid(unsafe_code)]
@@ -200,6 +209,7 @@ impl<'a> CharRanges<'a> {
 impl Iterator for CharRanges<'_> {
     type Item = (Range<usize>, char);
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let (start, c) = self.iter.next()?;
         let end = start + c.len_utf8();
@@ -220,11 +230,26 @@ impl Iterator for CharRanges<'_> {
     fn last(mut self) -> Option<(Range<usize>, char)> {
         self.next_back()
     }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let (start, c) = self.iter.nth(n)?;
+        let end = start + c.len_utf8();
+        Some((start..end, c))
+    }
 }
 
 impl DoubleEndedIterator for CharRanges<'_> {
+    #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         let (start, c) = self.iter.next_back()?;
+        let end = start + c.len_utf8();
+        Some((start..end, c))
+    }
+
+    #[inline]
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let (start, c) = self.iter.nth_back(n)?;
         let end = start + c.len_utf8();
         Some((start..end, c))
     }
@@ -330,6 +355,7 @@ impl<'a> CharRangesOffset<'a> {
 impl Iterator for CharRangesOffset<'_> {
     type Item = (Range<usize>, char);
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let (r, c) = self.iter.next()?;
         let start = r.start + self.offset;
@@ -351,11 +377,28 @@ impl Iterator for CharRangesOffset<'_> {
     fn last(mut self) -> Option<(Range<usize>, char)> {
         self.next_back()
     }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let (r, c) = self.iter.nth(n)?;
+        let start = r.start + self.offset;
+        let end = r.end + self.offset;
+        Some((start..end, c))
+    }
 }
 
 impl DoubleEndedIterator for CharRangesOffset<'_> {
+    #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         let (r, c) = self.iter.next_back()?;
+        let start = r.start + self.offset;
+        let end = r.end + self.offset;
+        Some((start..end, c))
+    }
+
+    #[inline]
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        let (r, c) = self.iter.nth_back(n)?;
         let start = r.start + self.offset;
         let end = r.end + self.offset;
         Some((start..end, c))
@@ -375,6 +418,8 @@ impl fmt::Debug for CharRangesOffset<'_> {
 
 #[cfg(test)]
 mod tests {
+    use core::iter;
+
     use super::CharRangesExt;
 
     #[test]
@@ -600,6 +645,63 @@ mod tests {
 
         assert_eq!(chars.next(), None);
         assert_eq!(chars.as_str(), "");
+    }
+
+    #[test]
+    fn test_last() {
+        let cases = [
+            ("Hello World", 10..11, 'd'),
+            ("Hello 👋 World 🌏", 17..21, '🌏'),
+            ("🗻12∈45🌏", 11..15, '🌏'),
+            ("Hello 🗻12∈45🌏 World", 26..27, 'd'),
+        ];
+        for (text, r, c) in cases {
+            let actual = text.char_ranges().last().unwrap();
+
+            assert_eq!(actual.0, r);
+            assert_eq!(actual.1, c);
+            assert!(text[r].chars().eq([c]));
+        }
+    }
+
+    #[test]
+    fn test_nth() {
+        let cases = [
+            "Hello World",
+            "Hello 👋 World 🌏",
+            "🗻12∈45🌏",
+            "Hello 🗻12∈45🌏 World",
+        ];
+        for text in cases {
+            // Since `nth()` doesn't use `next()` internally,
+            // then they are be compared
+            let char_ranges1 = text.char_ranges();
+            let char_ranges2 = iter::from_fn({
+                let mut char_ranges = text.char_ranges();
+                move || char_ranges.nth(0)
+            });
+            assert!(char_ranges1.eq(char_ranges2));
+        }
+    }
+
+    #[test]
+    fn test_nth_back() {
+        let cases = [
+            "Hello World",
+            "Hello 👋 World 🌏",
+            "🗻12∈45🌏",
+            "Hello 🗻12∈45🌏 World",
+        ];
+        for text in cases {
+            // Since `nth_back()` doesn't use `next_back()` internally,
+            // then they are be compared
+            let char_ranges1 = text.char_ranges().rev();
+            let char_ranges2 = iter::from_fn({
+                let mut char_ranges = text.char_ranges();
+                move || char_ranges.nth_back(0)
+            });
+            assert!(char_ranges1.eq(char_ranges2));
+        }
     }
 
     #[test]
