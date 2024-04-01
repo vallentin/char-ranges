@@ -1,5 +1,6 @@
 # char-ranges
 
+[![CI](https://github.com/vallentin/char-ranges/workflows/CI/badge.svg)](https://github.com/vallentin/char-ranges/actions?query=workflow%3ACI)
 [![Latest Version](https://img.shields.io/crates/v/char-ranges.svg)](https://crates.io/crates/char-ranges)
 [![Docs](https://docs.rs/char-ranges/badge.svg)](https://docs.rs/char-ranges)
 [![License](https://img.shields.io/github/license/vallentin/char-ranges.svg)](https://github.com/vallentin/char-ranges)
