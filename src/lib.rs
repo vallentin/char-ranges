@@ -116,7 +116,7 @@
 #![forbid(elided_lifetimes_in_paths)]
 
 use core::fmt;
-use core::iter::{DoubleEndedIterator, FusedIterator};
+use core::iter::FusedIterator;
 use core::ops::Range;
 use core::str::CharIndices;
 
